@@ -1,4 +1,5 @@
-"""This module is a work flow for orthomosaics posproccesing, it contains the models for extract the statistics """
+"""This module is a work flow for orthomosaics posproccesing, it contains the
+models for extract the statistics """
 import rasterio
 import numpy as np
 from rasterio.mask import mask
@@ -8,27 +9,28 @@ import json
 import os
 from rasterstats import zonal_stats
 # ------------------------------------------------------
-def mask_ortho(path,file,mask_path,en=None):
+def mask_ortho(path,file,mask_path,en=0):
     """This function makes a clip from a raster and vector files path
-    
     Args:
         Path(str): Directory path for raster file
-        File: Raster file name
-        Mask_path: File path for vector
-        en: Parameter that enables the output of raster clipped object
-    Returns: 
-        there are 3 kind of output:
+        File(str): Raster file name
+        Mask_path(str): File path for vector
+        en(int): Parameter that enables the output of raster clipped object
+    Returns:
+        there are 3 types of outputs:
             if any error : [1]
-            list: list with 1 element which contains a file_path for raster clipped
-            list: list with 2 element which contains a file_path for raster clipped and raster object respectively
+            list: list with 1 element which contains a file_path for raster
+             clipped
+            list: list with 2 element which contains a file_path for raster
+             clipped and raster object respectively
     """
 
-    fp=path + "\\" + file 
+    fp=path + "\\" + file
 #     print(fp)
 #     print(mask_path)
     out_tif = path + "\\" + "ERASE" + "\\" + file
     out_tif=out_tif.replace(".tif","_mask.tif")
-    
+
     try:
         with rasterio.open(fp) as d:
             masking= gpd.read_file(mask_path)
@@ -44,13 +46,22 @@ def mask_ortho(path,file,mask_path,en=None):
             dest.close()
             return [out_tif]
     except rasterio.errors.RasterioIOError:
-        return [1]  
+        return [1]
     except errors.DriverError:
         return [1]
     except:
         return [sys.exc_info()[0]]
 # ------------------------------------------------------
 def Vis_cal(fp):
+    """This function makes the calculations for 9 VIs.
+    Args:
+        fp(str): Raster file path for extracting the VIs
+    Returns:
+        there are 2 types of outputs:
+            if file is not found :  ["Raster Error: {0}".format(err1)]
+            dictionary: with 9 VIs files path
+    """
+
     ndvi_path=fp.replace(".tif","_NDVI.tif")
     ndre_path=fp.replace(".tif","_NDRE.tif")
     gndvi_path=fp.replace(".tif","_GNDVI.tif")
@@ -60,13 +71,16 @@ def Vis_cal(fp):
     ebvi_path=fp.replace(".tif","_EBVI.tif")
     grvi_path=fp.replace(".tif","_GRVI.tif")
     gbvi_path=fp.replace(".tif","_GBVI.tif")
-    out_path={"NDVI":ndvi_path, "NDRE":ndre_path,"GNDVI":gndvi_path,"BNDVI":bndvi_path,
-              "ERVI":ervi_path,"EGVI":egvi_path,"EBVI":ebvi_path,"GRVI":grvi_path,"GBVI":gbvi_path}
+    out_path={"NDVI":ndvi_path, "NDRE":ndre_path,"GNDVI":gndvi_path,
+    "BNDVI":bndvi_path,"ERVI":ervi_path,"EGVI":egvi_path,"EBVI":ebvi_path,
+    "GRVI":grvi_path,"GBVI":gbvi_path}
     try:
         with rasterio.open(fp) as raster:
             out_meta=raster.meta.copy()
-            out_meta.update({"driver": "GTiff", "height": raster.height, "width": raster.width,"count" : 1,
-                             "transform": raster.transform,"crs": raster.crs,"dtype":"float32"})
+            out_meta.update({"driver": "GTiff", "height": raster.height,
+             "width": raster.width,"count" : 1,
+                             "transform": raster.transform,"crs": raster.crs,
+                             "dtype":"float32"})
             blue=raster.read(1).astype(np.float32)
             green=raster.read(2).astype(np.float32)
             red = raster.read(3).astype(np.float32)
@@ -142,31 +156,43 @@ def Vis_cal(fp):
                 0,
                 (green-blue)/(green+blue)
             )
-            out.write(gbvi,1)  
+            out.write(gbvi,1)
             del gbvi
+        #Clear memory
         del blue
         del green
         del red
         del rededge
         del nir
     except rasterio.errors.RasterioIOError as err1:
-        return ["Raster Error: {0}".format(err1)]  
+        return ["Raster Error: {0}".format(err1)]
     return out_path
 # ------------------------------------------------------
-def extract_veg(fp,en):
+def vegetation_extraction(fp,en=0):
+    """This function makes the extraction of vegetation for an orthomosaic
+       using the work of Yuan Wang et al. (2012)
+    Args:
+        fp(str): Raster file path for extracting the vegetation
+        en(int): Parameter that enables the output of raster proccesed object
+    Returns:
+        there are 3 types of outputs:
+            if file is not found : [1]
+            list: list with 1 element which contains a file_path for raster proccesed
+            list: list with 2 element which contains a file_path for raster proccesed and raster object respectively
+    """
     out = fp.replace(".tif","_extrac_veg.tif")
     try:
         with rasterio.open(fp) as raster:
             out_meta=raster.meta.copy()
             out_meta.update({"driver": "GTiff", "height": raster.height, "width": raster.width,"count" : raster.count,
                              "transform": raster.transform,"crs": raster.crs,"dtype":"float32"})
-            r=raster.read().astype(np.float32)
-            out_temp=np.where(
+            r=raster.read().astype(np.float64) #change to float32 for less precision
+            out_temp=np.where( # Green minus red index
                 r[1]-r[2]<=20.,
                 0,
                 r
             )
-            
+
         dest=rasterio.open(out, "w+", **out_meta)
         dest.write(out_temp)
         if en==1:
@@ -174,22 +200,42 @@ def extract_veg(fp,en):
         else:
             dest.close()
             return [out]
-        return r
+        #return r
     except rasterio.errors.RasterioIOError:
-        return [1] 
+        return [1]
 # ------------------------------------------------------
 def stat(fp,shp):
+    """This function return a list with a dictionary with statistics
+    Args:
+        fp(str): Raster file path for extracting the statistics
+        shp(str): Shape file path for extracting the statistics
+    Returns:
+        there are 2 types of outputs:
+            if file is not found error : [1]
+            list: return a list with a dictionary with statistics
+    """
     try:
         with rasterio.open(fp) as r:
             array = r.read(1)
             affine = r.transform
             data=gpd.read_file(shp)
         stat = zonal_stats(data, array, affine=affine, stats=['min', 'max', 'mean', 'median', 'majority'])
-        return stat # return a list with dictionaries 
+        return stat # return a list with a dictionary
     except rasterio.errors.RasterioIOError:
         return [1]
 # ------------------------------------------------------
 def ini(DIR,stage_feat=None):
+    """This function returns a dictionary with each stage of the
+    crop found in the DIR directory.Each element of the dictionary
+     contains the file path for each orthomosaic found
+    Args:
+        fp(str): Raster file path for extracting the statistics
+        shp(str): Shape file path for extracting the statistics
+    Returns:
+        there are 2 types of outputs:
+            if file is not found error : [1]
+            list: return a list with a dictionary with statistics
+    """
     if stage_feat== None:
         a = os.walk(DIR)
         data=next(a)
@@ -197,29 +243,28 @@ def ini(DIR,stage_feat=None):
         stages.remove("SHAPES")
         stage_numbers=len(stages)
         variable= stages
-        
+
     else:
         variable=[stage_feat]
         stage_numbers=1
     d={}
-    for j in range(stage_numbers):    
-        
-        
+    for j in range(stage_numbers):
         aux=os.walk(DIR + "\\" + variable[j] )
         temp=next(aux)
-        
-        
         file_names=temp[2]
         string=[]
         file_path2={}
-        for i in range(len(file_names)):      
+        for i in range(len(file_names)):
             string.append(file_names[i][0:file_names[i].find(".")].split("_"))
             if "RM" in string[i]:
-                file_path2["RM"]=[temp[0], file_names[i],string[i][1:len(string[i])]]
+                file_path2["RM"]=[temp[0], file_names[i],string[i]
+                [1:len(string[i])]]
             elif "THM" in string[i]:
-                file_path2["THM"]=[temp[0],file_names[i],string[i][1:len(string[i])]]
+                file_path2["THM"]=[temp[0],file_names[i],string[i]
+                [1:len(string[i])]]
             elif "DEM" in file_names[i]:
-                file_path2["DEM"]=[temp[0],file_names[i],string[i][1:len(string[i])]]
+                file_path2["DEM"]=[temp[0],file_names[i],string[i]
+                [1:len(string[i])]]
         d[variable[j]]=file_path2
     return d
 # ------------------------------------------------------
@@ -227,7 +272,8 @@ def to_mask(Dir,cycle,stage_feat=None):
     d=ini(Dir,stage_feat)
     mask=Dir + "\\" + "SHAPES" + "\\" + "ALL.shp"
     plots=Dir + "\\" + "SHAPES" + "\\" + "PLOTS.shp"
-    out= r"C:\Users\Usuario\gis\CASANARE\DRONES\DATA\CIMARRON" +"\\" + cycle + "\\" + cycle + "_" + "STAT.json"
+    out= r"C:\Users\Usuario\gis\CASANARE\DRONES\DATA\CIMARRON" +"\\" + cycle
+     + "\\" + cycle + "_" + "STAT.json"
     dic={}
     ortho={}
     for i in d:
@@ -239,9 +285,9 @@ def to_mask(Dir,cycle,stage_feat=None):
 #             print(d[i]["RM"][1])
 #             print(mask)
             if  ma!= [1]:
-                e=extract_veg(ma[0],0)
+                e=vegetation_extraction(ma[0],0)
                 # anexar error al archivo log
-                if e!=1:
+                if e[0]!=1:
                     path=Vis_cal(e[0])
             del ma
             del e
@@ -255,12 +301,12 @@ def to_mask(Dir,cycle,stage_feat=None):
 #             delete variable
             del dic_RM
             del path
-        
+
 #        if "THM" in d[i]:
 #            ma=mask_ortho(d[i]["THM"][0],d[i]["THM"][1],mask,0)
-            
+
 #            ortho["THM"]=[stat(path[i],plots) for i in range(len(path))]
-            
+
         if "DEM" in d[i]:
             ma=mask_ortho(d[i]["DEM"][0],d[i]["DEM"][1],mask,0)
             if  ma!= [1]:
@@ -268,11 +314,9 @@ def to_mask(Dir,cycle,stage_feat=None):
             del ma
         print(ortho)
         dic[i]=ortho
-        
+
     json_file = json.dumps(dic)
     f = open(out,"w")
     f.write(json_file)
     f.close()
     return out
-  
-    

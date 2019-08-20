@@ -1,0 +1,4 @@
+- Capa base o de negocio (funciones bases) 
+- Capa controladora (funciones que utilizaran las funciones base)
+- Capa de visualización
+

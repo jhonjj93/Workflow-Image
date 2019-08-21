@@ -11,7 +11,7 @@ import json
 import pandas as pd
 from pandas import DataFrame
 import os
-import Base_functions as bf
+import Base_layer as bf
 
 
 # ------------------------------------------------------
@@ -137,30 +137,40 @@ def stat_ext_4cylces(Dir, cycle,location,field, stage_feat=None):
 
 # ------------------------------------------------------
 
-def reorder(out):
+def reorder(Dir, cycle,location,field):
     """This function returns a list with the next elements:
        1) dictionary: dictionary of crop stages, in each element of this
           dictionary are the information about Vis, dem and thm for each plot
           of each crop stages.
-       2)
-       3)
-       4)
+       2) list: stages names
+       3) list: VIs names
+       4) list: name of statistics variables
     Args:
-        out(str):
+        Dir(str): Directory path for the crop stages
+        cycle(str): the cycle of the farm
+        location(str): the location (Department)
+        field(str): the name of the farm field place
     Returns:
         there is a only output:
-            list :
+            list
 
     """
-    with open(out) as json_file:
+    dir_fix_jsons = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + field + \
+    "\\ALL\\" + cycle + "\\" + cycle + "_" + "STAT.json"
+    with open(dir_fix_jsons) as json_file:
         data = json.load(json_file)
     stages=data.keys()
     type_photo=data[list(stages)[0]].keys()
-    indices=data[list(stages)[0]][list(type_photo)[0]].keys()
-    plots_number=len(data[list(stages)[0]][list(type_photo)[0]][list(indices)[0]])
+    ortho_data_plots=data[list(stages)[0]][list(type_photo)[0]].keys()
+    ortho_data_plots=list(ortho_data_plots)
+    ortho_data_plots.append("THM")
+    ortho_data_plots.append("DEM")
+    plots_number=len(data[list(stages)[0]][list(type_photo)[0]][ortho_data_plots[0]])
     statistics=list(data[list(stages)[0]]
     [list(type_photo)[0]][list(data[list(stages)[0]]
     [list(type_photo)[0]].keys())[0]][0].keys())
+    statistics_len=len(statistics)
+
     dic={}
     dic_stages={}
     list_total=[]
@@ -169,11 +179,11 @@ def reorder(out):
         dic={}
         for j in data[i]: #j is the type of orthomosaic
             if not("DEM" in data[i]):
-                dic["DEM"]= [None] * plots_number
+                dic["DEM"]= [[None] * statistics_len]*plots_number
             if not("THM" in data[i]):
-                dic["THM"]= [None] * plots_number
+                dic["THM"]= [[None] * statistics_len]*plots_number
             if not("RM" in data[i]):
-                dic["RM"]= [None] * plots_number
+                dic["RM"]= [[None] * statistics_len]*plots_number
             if j=="RM":
 #                print(j)
 
@@ -207,54 +217,54 @@ def reorder(out):
                 # print(data[i][j]) # DEM
             # if j=="THM":
         dic_stages[i]=dic
-    return [dic_stages,list(stages),list(indices),statistics]
+    return [dic_stages,list(stages),ortho_data_plots,statistics]
 
 # ------------------------------------------------------
 
-def create_consolidated_dataframe(list_data,statistics,dir_agronomic_data):
-    agronomic_data=pd.read_csv(dir_agronomic_data) # read agronomic_data
+def create_consolidated_dataframe(data_list,statistics,Dir, cycle,location,field):
+    """This function returns a consolidated dataframe  with statistics data
+        from orthomosaics and agronomic data:
+    Args:
+        data_list: list[dictionary,list,list,list] --> see reorder function
+        Dir(str): Directory path for the crop stages
+        cycle(str): the cycle of the farm
+        location(str): the location (Department)
+        field(str): the name of the farm field place
+    Returns:
+        there is a only output:
+            Consolidated Dataframe
+
+    """
+    dir_fix_csv = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + field + \
+    "\\ALL\\" + cycle + "\\" +  "agronomic_data.csv"
+    agronomic_data=pd.read_csv(dir_fix_csv) # read agronomic_data
     g=agronomic_data.groupby("STAGE")
     list_stages_csv=list(g.groups.keys())
-#    for i in range(len(list_data[2])):
-#        list_data[2][i]=list_data[2][i] + "_" + statistics
     dic={}
     list_dataframes=[]
-#    print(list_data[1])
-#    print(list_stages_csv)
-    for i in range(len(list_data[1])): # from i to number of stages
-#        print(list_stages[i])
-#        print(i)
-        if list_data[1][i] in list_stages_csv: # to filter the stages
-
+    for i in range(len(data_list[1])): # from i to number of stages
+        if data_list[1][i] in list_stages_csv: # to filter the stages in csv file
             whole=[]
-            for j in list_data[2]:
-#                print(j)
-                df=DataFrame(list_data[0][list_data[1][i]][j],columns=list_data[3])
+            for j in data_list[2]: #from j to ortho_data_plots
+                data_stages_plots_dic=data_list[0]
+                stages=data_list[1][i]
+                #create a dataframe with each ortho_data_plots element
+                df=DataFrame(data_stages_plots_dic[stages][j],columns=data_list[3])
                 df= df[[statistics]]
                 df.columns=[j + "_" + statistics]
                 df
                 whole.append(df)
-
-#            print(list_data[1][i])
-            agronomic_dataframe=(g.get_group(list_data[1][i])).reset_index()
+            agronomic_dataframe=(g.get_group(data_list[1][i])).reset_index()
             del agronomic_dataframe["TIMESTAMP"]
-#            del agronomic_dataframe["STAGE"]
-#            del agronomic_dataframe["ID"]
             del agronomic_dataframe["index"]
-
             for m in list(agronomic_dataframe.keys()):
-#                print(m)
                 if agronomic_dataframe[m].dtypes == object and m!="STAGE" and m!= "ID":
                     agronomic_dataframe[m] = agronomic_dataframe[m].astype(float)
             agronomic_dataframe["ID"]=agronomic_dataframe["ID"].astype(int)
             whole.append(agronomic_dataframe)
-#            print(agronomic_dataframe)
-#            dic[list_data[1][i]]=pd.concat(whole,axis=1)
             list_dataframes.append(pd.concat(whole,axis=1))
-#    print(list_dataframes)
     mulindex=pd.concat(list_dataframes)
     mulindex=mulindex.set_index(["STAGE","ID"])
-
     return mulindex
 
 # ------------------------------------------------------

@@ -64,7 +64,8 @@ def find_ortho_crop_stages(DIR, stage_feat=None):
 
 # ------------------------------------------------------
 
-def stat_ext_4cylces(Dir, cycle,location,field, stage_feat=None):
+
+def stat_ext_4cylces(Dir, cycle, location, field, stage_feat=None):
     """This function returns a json file path. In this file are the all
      statistics for each crop stage, orthomosaic and plot.
     Args:
@@ -79,9 +80,9 @@ def stat_ext_4cylces(Dir, cycle,location,field, stage_feat=None):
 
     """
     dir_fix_maps = "\\" + location + "\\DRONES\\MAPS\\CIMARRON\\" + field + \
-    "\\ALL\\" # it must be revised
+        "\\ALL\\"  # it must be revised
     dir_fix_data = "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + field + \
-    "\\ALL\\"
+        "\\ALL\\"
     dir_completed = Dir + dir_fix_maps + cycle
     d = find_ortho_crop_stages(dir_completed, stage_feat)
     mask = dir_completed + "\\" + "SHAPES" + "\\" + "ALL.shp"
@@ -137,7 +138,8 @@ def stat_ext_4cylces(Dir, cycle,location,field, stage_feat=None):
 
 # ------------------------------------------------------
 
-def reorder(Dir, cycle,location,field):
+
+def reorder(Dir, cycle, location, field):
     """This function returns a list with the next elements:
        1) dictionary: dictionary of crop stages, in each element of this
           dictionary are the information about Vis, dem and thm for each plot
@@ -155,73 +157,81 @@ def reorder(Dir, cycle,location,field):
             list
 
     """
-    dir_fix_jsons = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + field + \
-    "\\ALL\\" + cycle + "\\" + cycle + "_" + "STAT.json"
+    dir_fix_jsons = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + \
+        field + "\\ALL\\" + cycle + "\\" + cycle + "_" + "STAT.json"
     with open(dir_fix_jsons) as json_file:
         data = json.load(json_file)
-    stages=data.keys()
-    type_photo=data[list(stages)[0]].keys()
-    ortho_data_plots=data[list(stages)[0]][list(type_photo)[0]].keys()
-    ortho_data_plots=list(ortho_data_plots)
+    stages = data.keys()
+    type_photo = data[list(stages)[0]].keys()
+    ortho_data_plots = data[list(stages)[0]][list(type_photo)[0]].keys()
+    ortho_data_plots = list(ortho_data_plots)
     ortho_data_plots.append("THM")
     ortho_data_plots.append("DEM")
-    plots_number=len(data[list(stages)[0]][list(type_photo)[0]][ortho_data_plots[0]])
-    statistics=list(data[list(stages)[0]]
-    [list(type_photo)[0]][list(data[list(stages)[0]]
-    [list(type_photo)[0]].keys())[0]][0].keys())
-    statistics_len=len(statistics)
+    plots_number = len(data[list(stages)[0]]
+                       [list(type_photo)[0]][ortho_data_plots[0]])
+    statistics = list(data[list(stages)[0]][list(type_photo)[0]][list(
+        data[list(stages)[0]][list(type_photo)[0]].keys())[0]][0].keys())
+    statistics_len = len(statistics)
 
-    dic={}
-    dic_stages={}
-    list_total=[]
-    for i in data: # i is stages
-#        print(i)
-        dic={}
-        for j in data[i]: #j is the type of orthomosaic
+    dic = {}
+    dic_stages = {}
+    list_total = []
+    for i in data:  # i is stages
+        # print(i)
+        dic = {}
+        for j in data[i]:  # j is the type of orthomosaic
             if not("DEM" in data[i]):
-                dic["DEM"]= [[None] * statistics_len]*plots_number
+                dic["DEM"] = [[None] * statistics_len] * plots_number
             if not("THM" in data[i]):
-                dic["THM"]= [[None] * statistics_len]*plots_number
+                dic["THM"] = [[None] * statistics_len] * plots_number
             if not("RM" in data[i]):
-                dic["RM"]= [[None] * statistics_len]*plots_number
-            if j=="RM":
-#                print(j)
+                dic["RM"] = [[None] * statistics_len] * plots_number
+            if j == "RM":
+                #                print(j)
 
-                for k in data[i][j]: # ALl indices
-#                    print(k)
-                    list_total=[]
-                    for h in data[i][j][k]: # statistics dictionary
-#                        print(h)
-                        list_stat=[]
+                for k in data[i][j]:  # ALl indices
+                    #                    print(k)
+                    list_total = []
+                    for h in data[i][j][k]:  # statistics dictionary
+                        #                        print(h)
+                        list_stat = []
                         for l in h:
                             list_stat.append(h[l])
 
                         list_total.append(list_stat)
 
-                    dic[k]=list_total
+                    dic[k] = list_total
 #                    print(k)
-#                print(dic)
-            if j=="DEM":
-                list_total=[]
+                # print(dic)
+            if j == "DEM":
+                list_total = []
                 for h in data[i][j]:
                     # print(h)
-                    list_stat=[]
+                    list_stat = []
                     for l in h:
                         list_stat.append(h[l])
                         # print(h[l])
                     list_total.append(list_stat)
-                dic["DEM"]=list_total
+                dic["DEM"] = list_total
 
                 # print(i)
                 # print(j)
                 # print(data[i][j]) # DEM
             # if j=="THM":
-        dic_stages[i]=dic
-    return [dic_stages,list(stages),ortho_data_plots,statistics]
+        # print(dic)
+        dic_stages[i] = dic
+    return [dic_stages, list(stages), ortho_data_plots, statistics]
 
 # ------------------------------------------------------
 
-def create_consolidated_dataframe(data_list,statistics,Dir, cycle,location,field):
+
+def create_consolidated_dataframe(
+        data_list,
+        statistics,
+        Dir,
+        cycle,
+        location,
+        field):
     """This function returns a consolidated dataframe  with statistics data
         from orthomosaics and agronomic data:
     Args:
@@ -235,36 +245,39 @@ def create_consolidated_dataframe(data_list,statistics,Dir, cycle,location,field
             Consolidated Dataframe
 
     """
-    dir_fix_csv = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + field + \
-    "\\ALL\\" + cycle + "\\" +  "agronomic_data.csv"
-    agronomic_data=pd.read_csv(dir_fix_csv) # read agronomic_data
-    g=agronomic_data.groupby("STAGE")
-    list_stages_csv=list(g.groups.keys())
-    dic={}
-    list_dataframes=[]
-    for i in range(len(data_list[1])): # from i to number of stages
-        if data_list[1][i] in list_stages_csv: # to filter the stages in csv file
-            whole=[]
-            for j in data_list[2]: #from j to ortho_data_plots
-                data_stages_plots_dic=data_list[0]
-                stages=data_list[1][i]
-                #create a dataframe with each ortho_data_plots element
-                df=DataFrame(data_stages_plots_dic[stages][j],columns=data_list[3])
-                df= df[[statistics]]
-                df.columns=[j + "_" + statistics]
+    dir_fix_csv = Dir + "\\" + location + "\\DRONES\\DATA\\CIMARRON\\" + \
+        field + "\\ALL\\" + cycle + "\\" + "agronomic_data.csv"
+    agronomic_data = pd.read_csv(dir_fix_csv)  # read agronomic_data
+    g = agronomic_data.groupby("STAGE")
+    list_stages_csv = list(g.groups.keys())
+    dic = {}
+    list_dataframes = []
+    for i in range(len(data_list[1])):  # from i to number of stages
+        if data_list[1][i] in list_stages_csv:  # to filter the stages in csv file
+            whole = []
+            for j in data_list[2]:  # from j to ortho_data_plots
+                data_stages_plots_dic = data_list[0]
+                stages = data_list[1][i]
+                # create a dataframe with each ortho_data_plots element
+                df = DataFrame(
+                    data_stages_plots_dic[stages][j],
+                    columns=data_list[3])
+                df = df[[statistics]]
+                df.columns = [j + "_" + statistics]
                 df
                 whole.append(df)
-            agronomic_dataframe=(g.get_group(data_list[1][i])).reset_index()
+            agronomic_dataframe = (g.get_group(data_list[1][i])).reset_index()
             del agronomic_dataframe["TIMESTAMP"]
             del agronomic_dataframe["index"]
             for m in list(agronomic_dataframe.keys()):
-                if agronomic_dataframe[m].dtypes == object and m!="STAGE" and m!= "ID":
-                    agronomic_dataframe[m] = agronomic_dataframe[m].astype(float)
-            agronomic_dataframe["ID"]=agronomic_dataframe["ID"].astype(int)
+                if agronomic_dataframe[m].dtypes == object and m != "STAGE" and m != "ID":
+                    agronomic_dataframe[m] = agronomic_dataframe[m].astype(
+                        float)
+            agronomic_dataframe["ID"] = agronomic_dataframe["ID"].astype(int)
             whole.append(agronomic_dataframe)
-            list_dataframes.append(pd.concat(whole,axis=1))
-    mulindex=pd.concat(list_dataframes)
-    mulindex=mulindex.set_index(["STAGE","ID"])
+            list_dataframes.append(pd.concat(whole, axis=1))
+    mulindex = pd.concat(list_dataframes)
+    mulindex = mulindex.set_index(["STAGE", "ID"])
     return mulindex
 
 # ------------------------------------------------------
